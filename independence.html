@@ -1,0 +1,432 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RAW Secure Access</title>
+<style>
+    body {
+        background-color: black;
+        color: #0ff;
+        font-family: 'Courier New', monospace;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        height: 100vh;
+        margin: 0;
+        overflow: hidden;
+    }
+    h1 {
+        position: fixed;
+        top: 10px;
+        font-size: 28px;
+        font-weight: bold;
+        text-shadow: 0 0 10px #0ff, 0 0 20px #0ff;
+    }
+    #text {
+        font-size: 20px;
+        text-align: center;
+        text-shadow: 0 0 5px #0ff, 0 0 10px #0ff;
+        white-space: pre-line;
+    }
+    .btn {
+        background: transparent;
+        border: 2px solid #0ff;
+        color: #0ff;
+        padding: 10px 20px;
+        margin: 10px;
+        font-size: 18px;
+        cursor: pointer;
+        text-shadow: 0 0 5px #0ff;
+        transition: 0.2s;
+    }
+    .btn:hover {
+        background: #0ff;
+        color: black;
+        box-shadow: 0 0 20px #0ff;
+    }
+    .dialog {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        background: rgba(0,0,0,0.9);
+        border: 2px solid #0ff;
+        padding: 20px;
+        display: none;
+        box-shadow: 0 0 20px #0ff;
+    }
+    @keyframes blink {
+        0%, 50%, 100% { opacity: 1; }
+        25%, 75% { opacity: 0; }
+    }
+    .access-granted {
+        color: #0f0; /* neon green */
+        font-size: 2em;
+        text-shadow: 0 0 10px #0f0, 0 0 20px #0f0, 0 0 40px #0f0;
+        animation: blink 1s infinite;
+    }
+    .close-btn {
+        background: red;
+        color: white;
+        border: none;
+        padding: 5px 10px;
+        float: right;
+        cursor: pointer;
+    }
+    input {
+        padding: 8px;
+        font-size: 16px;
+        margin: 10px 0;
+        border: 1px solid #0ff;
+        background: black;
+        color: #0ff;
+        outline: none;
+    }
+    .error {
+        color: red;
+        font-size: 14px;
+        margin-top: 5px;
+    }
+    .loading-container {
+        margin-top: 20px;
+        width: 300px;
+        height: 25px;
+        border: 2px solid #0ff;
+        box-shadow: 0 0 15px #0ff;
+        overflow: hidden;
+    }
+    .loading-bar {
+        height: 100%;
+        width: 0%;
+        background: #0ff;
+        box-shadow: 0 0 15px #0ff;
+        transition: width 2s linear;
+    }
+
+    /* 🔴 Tense countdown styles */
+    @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700&display=swap');
+
+    .mission-heading {
+        font-size: 3rem;
+        letter-spacing: 4px;
+        text-transform: uppercase;
+        color: #ff3b3b;
+        font-family: 'Orbitron', sans-serif;
+        text-shadow: 0 0 10px #ff3b3b, 0 0 20px #ff3b3b;
+        animation: tense-glow 1.5s infinite alternate;
+    }
+    @keyframes tense-glow {
+        0% { text-shadow: 0 0 5px #ff3b3b, 0 0 10px #ff3b3b; }
+        100% { text-shadow: 0 0 20px #ff3b3b, 0 0 40px #ff3b3b; }
+    }
+    .led {
+        display: inline-block;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background-color: #ff3b3b;
+        box-shadow: 0 0 10px #ff3b3b;
+        animation: flicker 0.15s infinite;
+        margin-left: 10px;
+        vertical-align: middle;
+    }
+    @keyframes flicker {
+        0%, 100% { opacity: 1; box-shadow: 0 0 10px #ff3b3b; }
+        50% { opacity: 0.5; box-shadow: 0 0 2px #ff3b3b; }
+    }
+    @keyframes bgPulse {
+        0% { background-color: black; }
+        50% { background-color: #200000; }
+        100% { background-color: black; }
+    }
+
+    /* Numpad Popup */
+#numpadPopup {
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex; 
+  align-items: center; 
+  justify-content: center;
+  z-index: 1000;
+}
+
+.numpad-container {
+  background: #111;
+  padding: 20px;
+  border: 2px solid #ff3b3b;
+  box-shadow: 0 0 20px #ff3b3b;
+  font-family: 'Orbitron', sans-serif;
+}
+
+.numpad-display {
+  background: black;
+  color: #ff3b3b;
+  font-size: 2em;
+  text-align: center;
+  padding: 10px;
+  margin-bottom: 10px;
+  border: 2px solid #ff3b3b;
+}
+
+.numpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 60px);
+  gap: 10px;
+  justify-content: center;
+}
+
+.numpad-btn {
+  background: black;
+  color: #ff3b3b;
+  font-size: 1.5em;
+  border: 2px solid #ff3b3b;
+  cursor: pointer;
+}
+</style>
+</head>
+<body onload="document.getElementById('numpadPopup').style.display = 'none';">
+<!-- Numpad Popup -->
+ <div id="numpadPopup" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.9); color:#0ff; display:flex; flex-direction:column; align-items:center; justify-content:center;">
+    <div id="numpadDisplay" style="font-size:2em; margin-bottom:10px;"></div>
+    <div id="numpadGrid" style="display:grid; grid-template-columns:repeat(3, 80px); gap:10px;"></div>
+    <button id="numpadClose" style="margin-top:20px; padding:10px 20px;">Close</button>
+  </div>
+
+
+<h1>RESEARCH & ANALYSIS WING</h1>
+
+<div id="text"></div>
+<button class="btn" id="startBtn">Start</button>
+<div id="buttons" style="display:none;">
+    <button class="btn" id="yesBtn">YES</button>
+    <button class="btn">NO</button>
+</div>
+
+<div class="dialog" id="dialog">
+    <button class="close-btn" id="closeDialog">X</button>
+    <h3>Enter Passcode</h3>
+    <input type="password" id="passcode" placeholder="Passcode">
+    <button class="btn" id="submitPass">Submit</button>
+    <div id="errorMsg" class="error"></div>
+</div>
+
+<audio id="introAudio" src="intro.mp3"></audio>
+<audio id="loadingAudio" src="loading.mp3"></audio>
+<script>
+    const textElement = document.getElementById('text');
+    const introText = 'Control to Alpha-One… Hope you read me...\n\nSecure channel active. Proceed with mission briefing?';
+    const introAudio = document.getElementById('introAudio');
+    const loadingAudio = document.getElementById('loadingAudio');
+    const buttons = document.getElementById('buttons');
+    const dialog = document.getElementById('dialog');
+    const yesBtn = document.getElementById('yesBtn');
+    const closeDialog = document.getElementById('closeDialog');
+    const submitPass = document.getElementById('submitPass');
+    const errorMsg = document.getElementById('errorMsg');
+
+    let timerInterval;
+    let tickAudio = new Audio("tick.mp3");
+
+    document.querySelector("#startBtn").addEventListener("click", function () {
+        numpadPopup.style.display = "none";
+        document.getElementById("startBtn").style.display = "none";
+        typeWriter(introText, 0, () => {
+            buttons.style.display = "block";
+        });
+        introAudio.play();
+    });
+
+    function typeWriter(text, i, callback) {
+        if (i < text.length) {
+            textElement.innerHTML += text.charAt(i);
+            setTimeout(() => typeWriter(text, i + 1, callback), 40);
+        } else {
+            callback();
+        }
+    }
+
+    yesBtn.onclick = () => { dialog.style.display = "block"; };
+    closeDialog.onclick = () => { dialog.style.display = "none"; };
+
+    submitPass.onclick = () => {
+        const pass = document.getElementById('passcode').value;
+        if (pass === "X9F4K1Z8Q7V3B5M2T0R6" || pass === "X9F4K1Z8Q7V3B5M2T0R6") {
+            errorMsg.textContent = "";
+            textElement.innerHTML = "";
+            buttons.style.display = "none";
+            dialog.style.display = "none";
+
+            const loadingDiv = document.createElement('div');
+            loadingDiv.className = 'loading-container';
+            const bar = document.createElement('div');
+            bar.className = 'loading-bar';
+            loadingDiv.appendChild(bar);
+            document.body.appendChild(loadingDiv);
+
+            loadingAudio.play();
+            setTimeout(() => { bar.style.width = '100%'; }, 100);
+
+            setTimeout(() => {
+                loadingAudio.pause();
+                bar.style.display = "none";
+                loadingDiv.style.display = "none";
+
+                const grantedText = document.createElement("div");
+                grantedText.textContent = "ACCESS GRANTED";
+                grantedText.classList.add("access-granted");
+                document.body.appendChild(grantedText);
+
+                setTimeout(() => {
+                    showDigitalCountdown();
+                }, 3000);
+            }, 2000);
+
+        } else {
+            errorMsg.textContent = "Wrong passcode entered";
+        }
+    };
+
+    function showDigitalCountdown() {
+        document.body.innerHTML = "";
+        document.body.style.animation = "bgPulse 1s infinite"; // 🔴 Red pulse background
+
+        const heading = document.createElement("div");
+        heading.innerHTML = `TIME TO MISSION <span class="led"></span>`;
+        heading.className = "mission-heading";
+        document.body.appendChild(heading);
+
+        const countdownDiv = document.createElement("div");
+        countdownDiv.style.fontFamily = "'Orbitron', sans-serif";
+        countdownDiv.style.fontSize = "80px";
+        countdownDiv.style.color = "#ff3b3b";
+        countdownDiv.style.textShadow = "0 0 20px #ff3b3b, 0 0 40px #ff3b3b";
+        document.body.appendChild(countdownDiv);
+
+        let totalMs = 30 * 60 * 1000; // 30 minutes
+        let endTime = Date.now() + totalMs;
+
+        function updateCountdown() {
+            let remaining = endTime - Date.now();
+            if (remaining <= 0) {
+                clearInterval(timerInterval);
+                tickAudio.pause();
+                loadMissionPage();
+                return;
+            }
+            let mins = Math.floor((remaining % 3600000) / 60000);
+            let secs = Math.floor((remaining % 60000) / 1000);
+            let ms = remaining % 1000;
+
+            countdownDiv.textContent =
+                `${String(mins).padStart(2, '0')}:` +
+                `${String(secs).padStart(2, '0')}:` +
+                `${String(ms).padStart(3, '0')}`;
+            tickAudio.play();
+        }
+
+        updateCountdown();
+        timerInterval = setInterval(updateCountdown, 10);
+    }
+
+    function loadMissionPage() {
+        document.body.innerHTML = "";
+        const heading = document.createElement("h1");
+        heading.textContent = "RESEARCH & ANALYSIS WING";
+        heading.style.position = "fixed";
+        heading.style.top = "10px";
+        heading.style.fontSize = "28px";
+        heading.style.fontWeight = "bold";
+        heading.style.textShadow = "0 0 10px #0ff, 0 0 20px #0ff";
+        heading.style.fontFamily = "'Courier New', monospace";
+        heading.style.color = "#0ff";
+        document.body.appendChild(heading);
+
+        const missionTextDiv = document.createElement("div");
+        missionTextDiv.id = "missionText";
+        missionTextDiv.style.fontSize = "20px";
+        missionTextDiv.style.textAlign = "center";
+        missionTextDiv.style.textShadow = "0 0 5px #0ff, 0 0 10px #0ff";
+        missionTextDiv.style.whiteSpace = "pre-line";
+        missionTextDiv.style.fontFamily = "'Courier New', monospace";
+        missionTextDiv.style.color = "#0ff";
+        missionTextDiv.style.marginTop = "100px";
+        document.body.appendChild(missionTextDiv);
+
+        const missionAudio = new Audio("Mission Assignment.mp3");
+        missionAudio.play();
+        missionAudio.onended = () => {
+            const missionText =
+`Primary objective: Conduct inside-out perimeter patrol.
+
+Secondary objective: Maintain constant visual sweep — report any unusual activity immediately.`;
+            let i = 0;
+            function typeWriterMission(callback) {
+    if (i < missionText.length) {
+        missionTextDiv.innerHTML += missionText.charAt(i);
+        i++;
+        setTimeout(() => typeWriterMission(callback), 40);
+    } else if (callback) {
+        callback();
+    }
+}
+            typeWriterMission(() => {
+    // After mission text finishes
+    const numpadPopup = document.getElementById("numpadPopup");
+    const okBtn = document.createElement("button");
+    okBtn.textContent = "OK";
+    okBtn.className = "btn";
+    okBtn.style.marginTop = "20px";
+    document.body.appendChild(okBtn);
+
+    okBtn.onclick = () => {
+        window.location.href = "independence2.html";
+    };
+});
+
+        };
+    }
+
+    // Numpad Setup
+// Create numpad buttons on page load
+document.addEventListener("DOMContentLoaded", () => {
+    const numpadGrid = document.getElementById("numpadGrid");
+    const numpadDisplay = document.getElementById("numpadDisplay");
+    const numpadPopup = document.getElementById("numpadPopup");
+    const numpadClose = document.getElementById("numpadClose");
+
+    const numpadNumbers = [1,2,3,4,5,6,7,8,9,0];
+    numpadNumbers.forEach(num => {
+        const btn = document.createElement("button");
+        btn.textContent = num;
+        btn.className = "numpad-btn";
+        btn.onclick = () => {
+            numpadDisplay.textContent += "*"; // Show star instead of number
+        };
+        numpadGrid.appendChild(btn);
+    });
+
+    numpadClose.onclick = () => {
+        numpadPopup.style.display = "none";
+        numpadDisplay.textContent = "";
+    };
+
+    // Show numpad when OK clicked
+    document.addEventListener("click", e => {
+        if (e.target && e.target.id === "okBtn") {
+            numpadPopup.style.display = "flex";
+        }
+    });
+});
+
+
+numpadClose.onclick = () => {
+    numpadPopup.style.display = "none";
+    numpadDisplay.textContent = "";
+};
+
+</script>
+</body>
+</html>
