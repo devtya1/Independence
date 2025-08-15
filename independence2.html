@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>R&AW Secure SOS</title>
+<style>
+    body {
+        background-color: black;
+        font-family: 'Orbitron', sans-serif;
+        color: white;
+        text-align: center;
+        margin: 0;
+        overflow: hidden;
+    }
+
+    h1 {
+        font-size: 3em;
+        color: cyan;
+        text-shadow: 0 0 20px cyan, 0 0 40px cyan;
+        margin-top: 50px;
+    }
+
+    .alert-btn {
+        padding: 20px 50px;
+        font-size: 2em;
+        color: white;
+        background-color: red;
+        border: none;
+        border-radius: 15px;
+        text-shadow: 0 0 20px red, 0 0 40px red;
+        box-shadow: 0 0 20px red, 0 0 40px red;
+        cursor: pointer;
+        animation: glow 1s infinite alternate;
+        margin-top: 200px;
+    }
+
+    @keyframes glow {
+        from { box-shadow: 0 0 10px red; }
+        to { box-shadow: 0 0 40px red; }
+    }
+
+    .confirm-btn {
+        padding: 15px 40px;
+        font-size: 1.5em;
+        margin: 10px;
+        border: none;
+        border-radius: 10px;
+        cursor: pointer;
+        text-shadow: 0 0 15px;
+        animation: glowConfirm 1s infinite alternate;
+    }
+
+    .confirm-yes {
+        background-color: lime;
+        color: black;
+        text-shadow: 0 0 15px lime;
+    }
+
+    .confirm-no {
+        background-color: gray;
+        color: white;
+        text-shadow: 0 0 15px white;
+    }
+
+    @keyframes glowConfirm {
+        from { box-shadow: 0 0 10px; }
+        to { box-shadow: 0 0 25px; }
+    }
+
+    .marquee {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        width: 100vw;
+        display: block;
+        white-space: nowrap;
+        overflow: hidden;
+        color: yellow;
+        background: rgba(0,0,0,0.8);
+        font-size: 1.2em;
+        padding: 5px 0;
+        margin: 0;
+        text-shadow: 0 0 10px yellow;
+        z-index: 9999;
+    }
+
+    .timer {
+        font-size: 2.5em;
+        margin-top: 200px;
+        color: red;
+        text-shadow: 0 0 15px red, 0 0 30px red;
+    }
+
+    .flicker {
+        animation: flickerBackground 0.2s infinite alternate;
+    }
+
+    @keyframes flickerBackground {
+        from { background-color: black; }
+        to { background-color: darkred; }
+    }
+
+    .success {
+        font-size: 2.5em;
+        color: lime;
+        text-shadow: 0 0 20px lime, 0 0 40px lime;
+        margin-top: 200px;
+    }
+
+    .status-label {
+        font-size: 1.5em;
+        margin-top: 20px;
+        color: cyan;
+        text-shadow: 0 0 10px cyan, 0 0 20px cyan;
+    }
+</style>
+</head>
+<body>
+    <h1 id="header">R&AW (Research and Analysis Wing)</h1>
+    <button type="button" class="alert-btn" id="alertBtn">ALERT</button>
+
+    <div id="confirmBox" style="display:none; margin-top:200px;">
+        <button type="button" class="confirm-btn confirm-yes" id="yesBtn">YES - Send SOS</button>
+        <button type="button" class="confirm-btn confirm-no" id="noBtn">NO - Cancel</button>
+    </div>
+
+    <div id="timer" class="timer" style="display:none;"></div>
+    <div id="status" class="status-label" style="display:none;"></div>
+    <div id="successMsg" class="success" style="display:none;">SOS sent successfully!</div>
+
+    <marquee class="marquee">⚠ Use this button wisely. Unwise use will lead to imprisonment. This is a government website. ⚠</marquee>
+
+    <!-- Add the alarm sound -->
+    <audio id="alarmSound" src="alarm.mp3" preload="auto"></audio>
+
+    <script>
+    const alertBtn = document.getElementById("alertBtn");
+    const confirmBox = document.getElementById("confirmBox");
+    const yesBtn = document.getElementById("yesBtn");
+    const noBtn = document.getElementById("noBtn");
+    const timerDisplay = document.getElementById("timer");
+    const statusLabel = document.getElementById("status");
+    const successMsg = document.getElementById("successMsg");
+    const header = document.getElementById("header");
+    const alarmSound = document.getElementById("alarmSound");
+
+    const statusMessages = [
+        "Collecting location data...",
+        "Triangulating signal...",
+        "Encrypting coordinates...",
+        "Transmitting to HQ...",
+        "Awaiting confirmation..."
+    ];
+
+    alertBtn.addEventListener("click", () => {
+        alertBtn.style.display = "none";
+        confirmBox.style.display = "block";
+    });
+
+    noBtn.addEventListener("click", () => {
+        confirmBox.style.display = "none";
+        alertBtn.style.display = "inline-block";
+    });
+
+    yesBtn.addEventListener("click", () => {
+        confirmBox.style.display = "none";
+        header.style.display = "none";
+        timerDisplay.style.display = "block";
+        statusLabel.style.display = "block";
+        document.body.classList.add("flicker");
+
+        let totalTime = 10000; // 10 seconds in ms
+        let statusIndex = 0;
+
+        // Start alarm if available
+        if (alarmSound) {
+            alarmSound.currentTime = 0;
+            alarmSound.play().catch(() => {});
+        }
+
+        // Change status message every 2 seconds
+        statusLabel.textContent = statusMessages[statusIndex];
+        const statusInterval = setInterval(() => {
+            statusIndex = (statusIndex + 1) % statusMessages.length;
+            statusLabel.textContent = statusMessages[statusIndex];
+        }, 2000);
+
+        // Timer countdown
+        const interval = setInterval(() => {
+            totalTime -= 10; // Update every 10 ms
+            let seconds = Math.floor(totalTime / 1000);
+            let milliseconds = totalTime % 1000;
+            timerDisplay.textContent = `${seconds}.${milliseconds.toString().padStart(3,'0')}s`;
+
+            if (totalTime <= 0) {
+                clearInterval(interval);
+                clearInterval(statusInterval);
+
+                // Stop alarm
+                if (alarmSound) {
+                    alarmSound.pause();
+                    alarmSound.currentTime = 0;
+                }
+
+                timerDisplay.style.display = "none";
+                statusLabel.style.display = "none";
+                document.body.classList.remove("flicker");
+                successMsg.style.display = "block";
+            }
+        }, 10);
+    });
+    </script>
+</body>
+</html>
